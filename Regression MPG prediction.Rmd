@@ -1,0 +1,124 @@
+---
+title: "Predict MPG based on HP, time to 1:4 mile, and transmission type"
+runtime: shiny
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Model design
+
+* An analysis of mtcars dataset has been conducted in order to design a regression model that could successfully explain variations in vehicle mileage 
+
+* The analysis revealed that optimal regression parameters predicting gas mileage include:
+    + weight (wt)
+    + time to 1/4 mile (qsec) 
+    + type of transmission (auto or manual)
+
+* A model has been fitted to predict the outcome based on these three parameters. Final model is represented by mpg ~ wt + qsec + am
+
+
+## Instructions
+- The application takes the input for the three model parameters (weight, time to 1/4 mile and type of transmission)
+
+- The application predicts the gas mileage for a vehicle with the parameters passed as an input. 
+
+- In addition, the application builds plots for the two continuous predictors against mileage (mpg against wt, and mpg against qsec) while showing factor transmission predictor as color.
+
+- All the vehicles in the dataset are plotted to indicate the relative position of the input parameters to those of real vehicles.
+
+
+## Predict MPG
+```{r}
+shinyApp(
+  
+  ui = fluidPage(
+  
+  # Application title
+  
+  
+  # Sidebar with a slider input for number of bins 
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("SliderWeight",
+                  "What is the weight of this car (in 1000 lbs)?",
+                  min = 1.5,
+                  max = 5.5,
+                  value = 3.5),
+      sliderInput("SliderQsec",
+                  "How fast does this car does 1/4 mile (in sec)?",
+                  min = 13,
+                  max = 23,
+                  value = 18),
+      checkboxInput("auto_manual", "Check if transmission is automatic", value = TRUE)
+      
+     
+     
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+      h3("Predicted mpg:"), 
+      textOutput("pred1"),
+      plotOutput("Plot1", height = "240px"),
+      plotOutput("Plot2", height = "240px")
+      
+      
+      
+    )
+  )
+),
+  
+  server = function(input, output) {
+  
+  model1 <- lm(mpg ~ wt + qsec + am, data = mtcars)
+  cars <- mtcars
+  cars$am <- as.factor(cars$am)
+  
+  model1pred <- reactive({
+    wtInput <- input$SliderWeight
+    qsecInput <- input$SliderQsec
+    amInput <- ifelse(input$auto_manual, 0, 1)
+    predict(model1, newdata = data.frame(wt = wtInput, qsec = qsecInput, am = amInput))
+  })
+  
+  
+  output$Plot1 <- renderPlot({
+    wtInput <- input$SliderWeight
+    qsecInput <- input$SliderQsec
+    amInput <- ifelse(input$auto_manual, 1, 0)
+    plot(mtcars$wt, mtcars$mpg, main = "MPG dependency on weight", xlab = "weight", ylab = "mpg", pch = 16, xlim = c(1.5, 5.5),
+         ylim = c(10, 35), col = cars$am)
+    points(wtInput, model1pred(), col = ifelse(amInput == 1, "red", "black"), pch = 16, cex = 4)
+    legend("topright", legend = c("manual", "auto"), fill = c("black", "red"), box.lty = 0)
+  })
+  
+  output$Plot2 <- renderPlot({
+    wtInput <- input$SliderWeight
+    qsecInput <- input$SliderQsec
+    amInput <- ifelse(input$auto_manual, 1, 0)
+    plot(mtcars$qsec, mtcars$mpg, main = "MPG dependency on time to 1/4 mile", xlab = "qsec", ylab = "mpg", pch = 16, xlim = c(13, 23),
+         ylim = c(10, 35), col = cars$am)
+    points(qsecInput, model1pred(), col = ifelse(amInput == 1, "red", "black"), pch = 16, cex = 4)
+    legend("topright", legend = c("manual", "auto"), fill = c("black", "red"), box.lty = 0)
+  })
+  
+  output$pred1 <- renderText({model1pred()})
+  
+},
+  
+  options = list(height = 500)
+)
+
+```
+
+
+## R Output
+
+- The model makes it possible to predict car model mileage with reasonable accuracy
+- Assuming that car weight is typically available, it only needs one simple meausurement that doesn't require any special tools
+- It doesn't require any specialized knowledge to be applied and the inference can be performed by anybody and anywhere with an access to browser
+
